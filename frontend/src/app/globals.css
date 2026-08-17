@@ -1,0 +1,214 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 9, 9, 11;
+  --background-end-rgb: 0, 0, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+  min-height: 100vh;
+  /* Apply cinematic glow background */
+  background-image: radial-gradient(circle at top, rgba(139, 92, 246, 0.1), transparent 80%), 
+                    radial-gradient(circle at bottom right, rgba(6, 182, 212, 0.05), transparent 80%);
+  background-color: #09090b;
+  background-attachment: fixed;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom styles */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.auth-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.dark .auth-card {
+  background: #1a1a1a;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.dark .form-label {
+  color: #e5e7eb;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .form-input {
+  background: #374151;
+  border-color: #4b5563;
+  color: white;
+}
+
+.btn {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+  font-size: 1rem;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #6b7280;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.alert {
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.alert-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.alert-success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.dark .alert-error {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.dark .alert-success {
+  background: #064e3b;
+  color: #a7f3d0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-admin {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-user {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.dark .badge-admin {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.dark .badge-user {
+  background: #312e81;
+  color: #a5b4fc;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  @apply bg-cinematic-800/40 backdrop-blur-md border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)];
+}
+
+.glass-panel-hover {
+  @apply transition-all duration-300 hover:bg-cinematic-700/50 hover:border-white/20 hover:shadow-[0_8px_40px_rgba(0,0,0,0.6)] hover:-translate-y-1;
+}
+
+.glass-card {
+  @apply rounded-2xl overflow-hidden glass-panel;
+}
+
+.glass-input {
+  @apply bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-neon-purple/50 focus:border-neon-purple transition-all;
+}
+
+.btn-premium {
+  @apply bg-gradient-to-r from-neon-purple to-neon-blue text-white font-semibold py-3 px-6 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all duration-300 hover:scale-105;
+}
+
+.btn-premium:disabled {
+  @apply from-gray-600 to-gray-700 text-gray-300 cursor-not-allowed transform-none shadow-none;
+}
+

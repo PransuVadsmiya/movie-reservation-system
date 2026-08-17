@@ -16,9 +16,11 @@ class Screen(Base):
     name = Column(String, nullable=False)
     rows = Column(Integer, nullable=False, default=10)
     columns = Column(Integer, nullable=False, default=10)
+    theater_id = Column(UUID(as_uuid=True), ForeignKey("theaters.id"), nullable=False)
 
     seats = relationship("Seat", back_populates="screen")
     showtimes = relationship("Showtime", back_populates="screen")
+    theater = relationship("Theater", back_populates="screens")
 
 
 class Seat(Base):

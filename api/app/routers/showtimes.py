@@ -43,7 +43,11 @@ def _generate_seats(db: Session, screen: Screen) -> None:
 
 @router.post("/screens", response_model=ScreenOut, status_code=status.HTTP_201_CREATED)
 def create_screen(screen_in: ScreenCreate, db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
-    screen = Screen(**screen_in.model_dump())
+    if not _admin.theater:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin does not have a theater")
+    screen_data = screen_in.model_dump()
+    screen_data["theater_id"] = _admin.theater.id
+    screen = Screen(**screen_data)
     db.add(screen)
     db.commit()
     db.refresh(screen)
@@ -54,8 +58,10 @@ def create_screen(screen_in: ScreenCreate, db: Session = Depends(get_db), _admin
 
 
 @router.get("/screens", response_model=list[ScreenOut])
-def list_screens(db: Session = Depends(get_db)):
-    return db.query(Screen).all()
+def list_screens(db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
+    if not _admin.theater:
+        raise HTTPException(status_code=400, detail="Admin does not have a theater")
+    return db.query(Screen).filter(Screen.theater_id == _admin.theater.id).all()
 
 
 # ---- Showtimes ----
@@ -73,6 +79,9 @@ def create_showtime(
     screen = db.query(Screen).filter(Screen.id == showtime_in.screen_id).first()
     if not screen:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Screen not found")
+        
+    if not _admin.theater or screen.theater_id != _admin.theater.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create showtime for another theater's screen")
 
     showtime = Showtime(**showtime_in.model_dump())
     db.add(showtime)
@@ -112,8 +121,10 @@ def get_showtimes_for_movie(
     if not movie:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
 
+    from sqlalchemy.orm import joinedload
     return (
         db.query(Showtime)
+        .options(joinedload(Showtime.screen).joinedload(Screen.theater))
         .filter(Showtime.movie_id == movie_id)
         .filter(func.date(Showtime.start_time) == show_date)
         .order_by(Showtime.start_time)

@@ -5,6 +5,9 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+from app.schemas.theater import TheaterOut
+
+
 class ScreenCreate(BaseModel):
     name: str
     rows: int = Field(default=10, ge=1, le=26)      # capped at 26 to fit A-Z row labels
@@ -18,6 +21,8 @@ class ScreenOut(BaseModel):
     name: str
     rows: int
     columns: int
+    theater_id: uuid.UUID
+    theater: TheaterOut | None = None
 
 
 class ShowtimeCreate(BaseModel):
@@ -35,6 +40,7 @@ class ShowtimeOut(BaseModel):
     screen_id: uuid.UUID
     start_time: datetime
     price: Decimal
+    screen: ScreenOut | None = None
 
 
 class SeatMapEntry(BaseModel):

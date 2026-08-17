@@ -21,3 +21,20 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     return encoded_jwt
+
+
+def create_reset_password_token(email: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode = {"sub": email, "type": "reset", "exp": expire}
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    return encoded_jwt
+
+
+def verify_reset_password_token(token: str) -> str | None:
+    try:
+        decoded_token = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        if decoded_token.get("type") != "reset":
+            return None
+        return decoded_token.get("sub")
+    except jwt.JWTError:
+        return None

@@ -4,7 +4,7 @@ from app.config import settings
 
 redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
 
-# Key pattern used for seat locks (written starting Day 5):
+# Key pattern used for seat locks :
 #   seat:{showtime_id}:{seat_id} -> user_id who holds it, with a TTL
 SEAT_LOCK_KEY_TEMPLATE = "seat:{showtime_id}:{seat_id}"
 

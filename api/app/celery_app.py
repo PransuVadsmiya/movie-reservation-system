@@ -16,5 +16,5 @@ celery_app.conf.update(
     enable_utc=True,
 )
 
-# Task modules get added here on Day 6 (e.g. app.tasks.notifications, app.tasks.locks)
+# Task modules will be added here (e.g. app.tasks.notifications, app.tasks.locks)
 celery_app.autodiscover_tasks(["app"])

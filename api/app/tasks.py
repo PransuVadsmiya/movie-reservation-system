@@ -21,3 +21,13 @@ def send_confirmation_email(reservation_id: str, user_email: str, seat_count: in
         user_email,
         seat_count,
     )
+
+
+@celery_app.task(name="send_password_reset_email")
+def send_password_reset_email(user_email: str, reset_url: str) -> None:
+    """Simulates sending a password reset email."""
+    logger.info(
+        "password_reset_email_sent user_email=%s reset_url=%s",
+        user_email,
+        reset_url,
+    )

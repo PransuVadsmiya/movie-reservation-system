@@ -54,4 +54,3 @@ docker-compose exec api alembic upgrade head
 Auth — signup/login, JWT issuing, role-based dependency for admin routes,
 seed script for the initial admin user.
 
-<!-- curl -X POST http://localhost:8001/reservations/confirm -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjY2YxNzI4MC1lOGYzLTQ0MmYtODA2Ni04Y2VmMThkYWZkOTIiLCJleHAiOjE3ODU5OTg2OTN9.Mtp0XGVXUFmKewNpzRtJST9pq-ZIiWOtYc-sW-cZH0I" -H "Content-Type: application/json" -d "{\"showtime_id\":\"5875d615-3d2f-440e-b69c-9d5d94359fa8\",\"seat_ids\":[\"876dbc98-46cb-4a27-99d6-7fb7aa99ddd7\"]}" -->

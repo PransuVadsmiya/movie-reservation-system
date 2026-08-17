@@ -4,6 +4,7 @@ from time import perf_counter
 
 from fastapi import FastAPI, Depends, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import text
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.redis_client import redis_client
 from app.database import get_db, SessionLocal
 from app.seed import seed_admin
-from app.routers import auth, movies, showtimes, reservations, reports
+from app.routers import auth, movies, showtimes, reservations, reports, admin_dashboard
 from app.dependencies import get_current_user, require_admin
 from app.errors import (
     http_exception_handler,
@@ -21,8 +22,7 @@ from app.errors import (
 )
 from app.models.user import User
 from app.rate_limit import limiter
-from app.schemas.user import UserOut
-
+from app.schemas.user import UserOut, UserUpdate
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
@@ -42,6 +42,21 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Movie Reservation System", version="0.1.0", lifespan=lifespan)
+
+# Add CORS middleware to allow frontend (Next.js) to make requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # Next.js frontend
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers including Authorization
+)
+
 app.state.limiter = limiter
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -71,6 +86,7 @@ app.include_router(movies.router)
 app.include_router(showtimes.router)
 app.include_router(reservations.router)
 app.include_router(reports.router)
+app.include_router(admin_dashboard.router)
 
 
 @app.get("/health")
@@ -88,6 +104,22 @@ def root():
 @app.get("/me", response_model=UserOut)
 def read_current_user(current_user: User = Depends(get_current_user)):
     """Quick route to sanity-check auth is wired correctly end to end."""
+    return current_user
+
+
+@app.put("/me", response_model=UserOut)
+def update_current_user(
+    user_in: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user profile."""
+    update_data = user_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+    
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 
