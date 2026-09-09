@@ -25,6 +25,10 @@ interface DashboardStats {
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // New state variables for Quick Add Movie
+  const [addingMovie, setAddingMovie] = useState(false);
+  const [addMessage, setAddMessage] = useState({ text: '', type: '' });
 
   useEffect(() => {
     fetchStats();
@@ -85,6 +89,61 @@ export default function AdminDashboardPage() {
               </motion.div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Quick Add Movie */}
+      <div>
+        <h2 className="text-2xl font-bold mb-6">Quick Add Movie</h2>
+        <div className="bg-[#151722] border border-white/5 rounded-xl p-6">
+          <form 
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const title = formData.get('title') as string;
+              if (!title) return;
+              
+              setAddingMovie(true);
+              setAddMessage({ text: '', type: '' });
+              
+              try {
+                const response = await apiClient.post('/movies/fetch-from-tmdb', { title });
+                setAddMessage({ 
+                  text: `Successfully added "${response.data.title}" to the global database! You can now add showtimes for it.`, 
+                  type: 'success' 
+                });
+                (e.target as HTMLFormElement).reset();
+              } catch (error: any) {
+                setAddMessage({ 
+                  text: error.response?.data?.detail || 'Failed to add movie. It may already exist or was not found on TMDB.', 
+                  type: 'error' 
+                });
+              } finally {
+                setAddingMovie(false);
+              }
+            }}
+            className="flex flex-col sm:flex-row gap-4 max-w-2xl"
+          >
+            <input 
+              type="text" 
+              name="title" 
+              placeholder="Enter movie title (e.g. Inception)" 
+              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-[#ff4d6d] transition-colors"
+              required
+            />
+            <button 
+              type="submit" 
+              disabled={addingMovie}
+              className="bg-[#ff4d6d] hover:bg-[#ff2a55] disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              {addingMovie ? 'Fetching...' : 'Fetch & Add to DB'}
+            </button>
+          </form>
+          {addMessage.text && (
+            <div className={`mt-4 p-4 rounded-lg border ${addMessage.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+              {addMessage.text}
+            </div>
+          )}
         </div>
       </div>
 

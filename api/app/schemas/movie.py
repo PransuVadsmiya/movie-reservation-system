@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -19,6 +20,9 @@ class MovieCreate(BaseModel):
     title: str
     description: Optional[str] = None
     poster_url: Optional[str] = None
+    backdrop_url: Optional[str] = None
+    rating: Optional[float] = None
+    release_date: Optional[date] = None
     genre_id: Optional[uuid.UUID] = None
 
 
@@ -27,6 +31,9 @@ class MovieUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     poster_url: Optional[str] = None
+    backdrop_url: Optional[str] = None
+    rating: Optional[float] = None
+    release_date: Optional[date] = None
     genre_id: Optional[uuid.UUID] = None
 
 
@@ -37,4 +44,11 @@ class MovieOut(BaseModel):
     title: str
     description: Optional[str] = None
     poster_url: Optional[str] = None
+    backdrop_url: Optional[str] = None
+    rating: Optional[float] = None
+    release_date: Optional[date] = None
     genre_id: Optional[uuid.UUID] = None
+
+
+class MovieFetchRequest(BaseModel):
+    title: str

@@ -48,6 +48,7 @@ class SeatMapEntry(BaseModel):
     row_label: str
     seat_number: int
     status: str  # "available" | "locked" | "booked"
+    is_mine: bool = False
 
 
 class SeatMapOut(BaseModel):

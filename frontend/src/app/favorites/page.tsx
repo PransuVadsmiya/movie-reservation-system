@@ -22,7 +22,7 @@ interface Movie {
   genre_id: string | null;
 }
 
-export default function MoviesPage() {
+export default function FavoritesPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -55,9 +55,14 @@ export default function MoviesPage() {
   const fetchMovies = async (genreId?: string) => {
     setLoadingMovies(true);
     try {
-      const url = genreId ? `/movies?genre_id=${genreId}` : '/movies';
-      const response = await apiClient.get(url);
-      setMovies(response.data);
+      const response = await apiClient.get('/favorites');
+      const favoriteMovies = response.data.map((fav: any) => fav.movie).filter(Boolean);
+      
+      if (genreId) {
+        setMovies(favoriteMovies.filter((m: Movie) => m.genre_id === genreId));
+      } else {
+        setMovies(favoriteMovies);
+      }
     } catch (err) {
       console.error('Failed to fetch movies:', err);
     } finally {
@@ -94,9 +99,9 @@ export default function MoviesPage() {
         <div className="hidden md:flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-2 py-1 backdrop-blur-md">
           <Link href="/" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Home</Link>
           <Link href="/dashboard" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Dashboard</Link>
-          <Link href="/movies" className="px-5 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-red-500 to-pink-500 text-transparent bg-clip-text">Movies</Link>
+          <Link href="/movies" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Movies</Link>
           <Link href="/reservations" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Tickets</Link>
-          <Link href="/favorites" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Favorites</Link>
+          <Link href="/favorites" className="px-5 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-red-500 to-pink-500 text-transparent bg-clip-text">Favorites</Link>
         </div>
 
         <div className="flex items-center gap-6">

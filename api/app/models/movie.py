@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, String, Text, ForeignKey, DateTime, func
+from sqlalchemy import Column, String, Text, ForeignKey, DateTime, func, Float, Date
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -23,6 +23,9 @@ class Movie(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
+    backdrop_url = Column(String, nullable=True)
+    rating = Column(Float, nullable=True)
+    release_date = Column(Date, nullable=True)
     genre_id = Column(UUID(as_uuid=True), ForeignKey("genres.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

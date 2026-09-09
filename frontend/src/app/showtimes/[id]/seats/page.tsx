@@ -21,6 +21,7 @@ interface SeatMapEntry {
   row_label: string;
   seat_number: number;
   status: 'available' | 'locked' | 'booked';
+  is_mine: boolean;
 }
 
 interface SeatMap {
@@ -56,18 +57,26 @@ export default function SeatSelectionPage() {
     }
   }, [user, showtimeId]);
 
+  const [now, setNow] = useState(Date.now());
+
   // Countdown timer for lock expiry
   useEffect(() => {
     if (lockExpiry) {
+      setNow(Date.now());
       const interval = setInterval(() => {
-        const remaining = Math.floor((lockExpiry - Date.now()) / 1000);
-        if (remaining <= 0) {
+        const currentTime = Date.now();
+        setNow(currentTime);
+        const remainingMs = lockExpiry - currentTime;
+        if (remainingMs <= 0) {
           setError('Your seat lock has expired. Please select seats again.');
           setStep('select');
           setLockedSeats([]);
           setSelectedSeats([]);
           setLockExpiry(null);
-          fetchSeatMap(); // Refresh seat map
+          // Wait a short moment to ensure backend Redis TTL has fully expired
+          setTimeout(() => {
+            fetchSeatMap();
+          }, 1500);
         }
       }, 1000);
       return () => clearInterval(interval);
@@ -177,7 +186,19 @@ export default function SeatSelectionPage() {
     }
   };
 
-  const handleCancelSelection = () => {
+  const handleCancelSelection = async () => {
+    if (lockedSeats.length > 0) {
+      setLoadingAction(true);
+      try {
+        await apiClient.delete(`/showtimes/${showtimeId}/lock-seats`, {
+          data: { seat_ids: lockedSeats }
+        });
+      } catch (err) {
+        console.error('Failed to explicitly release seats', err);
+      }
+      setLoadingAction(false);
+    }
+    
     setSelectedSeats([]);
     setLockedSeats([]);
     setLockExpiry(null);
@@ -191,11 +212,19 @@ export default function SeatSelectionPage() {
       return 'bg-yellow-500/80 border-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.5)] cursor-not-allowed';
     }
     if (selectedSeats.includes(seat.seat_id)) {
-      return 'bg-neon-cyan border-white shadow-[0_0_15px_rgba(6,182,212,0.8)] cursor-pointer scale-110 z-10';
+      return 'bg-gradient-to-br from-red-500 to-pink-500 border-white shadow-[0_0_15px_rgba(255,42,85,0.6)] cursor-pointer scale-110 z-10';
     }
+    
+    if (seat.is_mine) {
+      if (seat.status === 'locked') {
+        return 'bg-[#ff4d6d]/80 border-[#ff4d6d] shadow-[0_0_10px_rgba(255,77,109,0.5)] cursor-not-allowed';
+      }
+      return 'bg-[#ff4d6d]/60 border-[#ff4d6d]/80 cursor-not-allowed';
+    }
+
     switch (seat.status) {
       case 'available':
-        return 'bg-white/10 border-white/20 hover:border-neon-cyan/50 hover:bg-neon-cyan/20 cursor-pointer';
+        return 'bg-white/10 border-white/20 hover:border-[#ff4d6d]/50 hover:bg-[#ff4d6d]/20 cursor-pointer';
       case 'locked':
         return 'bg-yellow-500/30 border-yellow-500/50 cursor-not-allowed opacity-50';
       case 'booked':
@@ -220,7 +249,7 @@ export default function SeatSelectionPage() {
 
   const getRemainingTime = () => {
     if (!lockExpiry) return null;
-    const remaining = Math.floor((lockExpiry - Date.now()) / 1000);
+    const remaining = Math.floor((lockExpiry - now) / 1000);
     if (remaining <= 0) return '0:00';
     const minutes = Math.floor(remaining / 60);
     const seconds = remaining % 60;
@@ -230,7 +259,7 @@ export default function SeatSelectionPage() {
   if (loading || !user || !showtime) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-cyan"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff4d6d]"></div>
       </div>
     );
   }
@@ -292,8 +321,9 @@ export default function SeatSelectionPage() {
         <div className="mb-12 flex flex-wrap gap-6 justify-center text-sm glass-panel py-4 px-6 rounded-full w-max mx-auto">
           {[
             { label: 'Available', color: 'bg-white/10 border-white/20' },
-            { label: 'Selected', color: 'bg-neon-cyan border-white shadow-[0_0_10px_rgba(6,182,212,0.5)]' },
+            { label: 'Selected', color: 'bg-gradient-to-r from-red-500 to-pink-500 border-white shadow-[0_0_10px_rgba(255,42,85,0.4)]' },
             { label: 'Your Lock', color: 'bg-yellow-500/80 border-yellow-400' },
+            { label: 'Your Booked Seats', color: 'bg-[#ff4d6d]/60 border-[#ff4d6d]/80' },
             { label: 'Unavailable', color: 'bg-red-500/40 border-red-500/50' },
           ].map((item, idx) => (
             <div key={idx} className="flex items-center gap-2">
@@ -305,18 +335,18 @@ export default function SeatSelectionPage() {
 
         {/* Theater Screen */}
         <div className="mb-16 max-w-4xl mx-auto relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-neon-cyan/20 filter blur-[50px] rounded-full pointer-events-none"></div>
-          <svg viewBox="0 0 800 100" className="w-full drop-shadow-[0_10px_20px_rgba(6,182,212,0.3)]">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-[#ff4d6d]/20 filter blur-[50px] rounded-full pointer-events-none"></div>
+          <svg viewBox="0 0 800 100" className="w-full drop-shadow-[0_10px_20px_rgba(255,42,85,0.3)]">
             <path d="M 50 100 Q 400 0 750 100" fill="none" stroke="url(#screen-gradient)" strokeWidth="6" strokeLinecap="round" />
             <defs>
               <linearGradient id="screen-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
-                <stop offset="50%" stopColor="#06b6d4" stopOpacity="1" />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.2" />
+                <stop offset="0%" stopColor="#ff4d6d" stopOpacity="0.1" />
+                <stop offset="50%" stopColor="#ff4d6d" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#ff4d6d" stopOpacity="0.1" />
               </linearGradient>
             </defs>
           </svg>
-          <div className="text-center text-sm font-bold tracking-[0.3em] text-neon-cyan/60 mt-2 uppercase">Screen</div>
+          <div className="text-center text-sm font-bold tracking-[0.3em] text-[#ff4d6d]/60 mt-2 uppercase">Screen</div>
         </div>
 
         {/* Seat Grid */}

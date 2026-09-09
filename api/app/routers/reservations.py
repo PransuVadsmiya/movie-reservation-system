@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from app.config import settings
 from app.database import get_db
@@ -95,6 +96,22 @@ def lock_seats(
     )
 
 
+class UnlockSeatsRequest(BaseModel):
+    seat_ids: list[uuid.UUID]
+
+@router.delete("/showtimes/{showtime_id}/lock-seats", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.shared_limit("10/minute", scope="unlock_seats")
+def unlock_seats(
+    request: Request,
+    showtime_id: uuid.UUID,
+    body: UnlockSeatsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    release_seats(showtime_id, body.seat_ids, current_user.id)
+    return None
+
+
 @router.post("/reservations/confirm", response_model=ReservationOut, status_code=status.HTTP_201_CREATED)
 @limiter.shared_limit("10/minute", scope="confirm_reservation")
 def confirm_reservation(
@@ -168,10 +185,15 @@ def confirm_reservation(
 
     # Async confirmation email - dispatched to Celery, doesn't block this
     # request on however long "sending an email" would take.
+    movie_title = showtime.movie.title if showtime and showtime.movie else "your movie"
+    start_time_str = showtime.start_time.strftime("%a, %b %d, %Y %I:%M %p") if showtime and showtime.start_time else ""
+    
     send_confirmation_email.delay(
         reservation_id=str(reservation.id),
         user_email=current_user.email,
         seat_count=len(body.seat_ids),
+        movie_title=movie_title,
+        start_time=start_time_str,
     )
 
     return ReservationOut(

@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_admin
+from app.dependencies import require_admin, get_current_user_optional
 from app.models.showtime import Screen, Seat, Showtime
 from app.models.movie import Movie
 from app.models.reservation import ReservationSeat, Reservation, ReservationStatus
@@ -133,7 +133,11 @@ def get_showtimes_for_movie(
 
 
 @router.get("/showtimes/{showtime_id}/seats", response_model=SeatMapOut)
-def get_seat_map(showtime_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_seat_map(
+    showtime_id: uuid.UUID, 
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional)
+):
     """Seat map for a showtime: every seat on the screen, tagged available /
     locked / booked. Merges two sources:
       - Postgres: seats already committed to a confirmed Reservation
@@ -147,33 +151,42 @@ def get_seat_map(showtime_id: uuid.UUID, db: Session = Depends(get_db)):
 
     all_seats = db.query(Seat).filter(Seat.screen_id == showtime.screen_id).all()
 
-    booked_seat_ids = {
-        row.seat_id
-        for row in (
-            db.query(ReservationSeat.seat_id)
-            .join(Reservation, Reservation.id == ReservationSeat.reservation_id)
-            .filter(ReservationSeat.showtime_id == showtime_id)
-            .filter(Reservation.status == ReservationStatus.confirmed)
-            .all()
-        )
-    }
+    booked_seats_query = (
+        db.query(ReservationSeat.seat_id, Reservation.user_id)
+        .join(Reservation, Reservation.id == ReservationSeat.reservation_id)
+        .filter(ReservationSeat.showtime_id == showtime_id)
+        .filter(Reservation.status == ReservationStatus.confirmed)
+        .all()
+    )
+    booked_seat_user_map = {row.seat_id: row.user_id for row in booked_seats_query}
+    booked_seat_ids = set(booked_seat_user_map.keys())
 
     entries = []
     if all_seats:
         lock_keys = [seat_lock_key(showtime_id, seat.id) for seat in all_seats]
         # Single round-trip for all seats instead of one exists() call per seat.
         lock_values = redis_client.mget(lock_keys)
-        locked_seat_ids = {
-            seat.id for seat, value in zip(all_seats, lock_values) if value is not None
+        locked_seat_user_map = {
+            seat.id: value.decode("utf-8") if isinstance(value, bytes) else str(value) 
+            for seat, value in zip(all_seats, lock_values) if value is not None
         }
+        locked_seat_ids = set(locked_seat_user_map.keys())
     else:
         locked_seat_ids = set()
+        locked_seat_user_map = {}
+
+    current_user_id = str(current_user.id) if current_user else None
 
     for seat in all_seats:
+        is_mine = False
         if seat.id in booked_seat_ids:
             seat_status = "booked"
+            if current_user_id and str(booked_seat_user_map[seat.id]) == current_user_id:
+                is_mine = True
         elif seat.id in locked_seat_ids:
             seat_status = "locked"
+            if current_user_id and locked_seat_user_map[seat.id] == current_user_id:
+                is_mine = True
         else:
             seat_status = "available"
 
@@ -183,6 +196,7 @@ def get_seat_map(showtime_id: uuid.UUID, db: Session = Depends(get_db)):
                 row_label=seat.row_label,
                 seat_number=seat.seat_number,
                 status=seat_status,
+                is_mine=is_mine,
             )
         )
 

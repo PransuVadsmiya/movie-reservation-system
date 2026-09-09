@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.redis_client import redis_client
 from app.database import get_db, SessionLocal
 from app.seed import seed_admin
-from app.routers import auth, movies, showtimes, reservations, reports, admin_dashboard
+from app.routers import auth, movies, showtimes, reservations, reports, admin_dashboard, favorites
 from app.dependencies import get_current_user, require_admin
 from app.errors import (
     http_exception_handler,
@@ -86,6 +86,7 @@ app.include_router(movies.router)
 app.include_router(showtimes.router)
 app.include_router(reservations.router)
 app.include_router(reports.router)
+app.include_router(favorites.router)
 app.include_router(admin_dashboard.router)
 
 

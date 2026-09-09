@@ -68,9 +68,20 @@ export default function ShowtimesPage() {
       fetchMovie();
       const today = new Date().toISOString().split('T')[0];
       setSelectedDate(today);
-      setIsFavorite(localStorage.getItem(`fav_${movieId}`) === 'true');
+      checkFavoriteStatus();
     }
   }, [user, movieId]);
+
+  const checkFavoriteStatus = async () => {
+    try {
+      const response = await apiClient.get('/favorites');
+      const favorites = response.data;
+      const isFav = favorites.some((fav: any) => fav.movie_id === movieId);
+      setIsFavorite(isFav);
+    } catch (err) {
+      console.error('Failed to check favorite status:', err);
+    }
+  };
 
   useEffect(() => {
     if (selectedDate && movieId) {
@@ -91,6 +102,12 @@ export default function ShowtimesPage() {
 
   const fetchCast = async (title: string) => {
     try {
+      const cached = localStorage.getItem(`cast_${title}`);
+      if (cached) {
+        setCast(JSON.parse(cached));
+        return;
+      }
+      
       const apiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
       if (!apiKey) return;
       const searchRes = await fetch(`https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(title)}&api_key=${apiKey}`);
@@ -100,7 +117,9 @@ export default function ShowtimesPage() {
         const creditsRes = await fetch(`https://api.themoviedb.org/3/movie/${tmdbId}/credits?api_key=${apiKey}`);
         const creditsData = await creditsRes.json();
         if (creditsData.cast) {
-          setCast(creditsData.cast.slice(0, 10));
+          const castList = creditsData.cast.slice(0, 10);
+          setCast(castList);
+          localStorage.setItem(`cast_${title}`, JSON.stringify(castList));
         }
       }
     } catch (err) {
@@ -222,10 +241,15 @@ export default function ShowtimesPage() {
               </div>
               
               <div className="flex flex-wrap items-center gap-4">
-                <button className="flex items-center gap-2 bg-[#2a2d3e] hover:bg-[#34384c] text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                <a 
+                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + " trailer")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-[#2a2d3e] hover:bg-[#34384c] text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   Watch Trailer
-                </button>
+                </a>
                 <button 
                   onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
                   className="bg-[#ff4d6d] hover:bg-[#ff2a55] text-white px-8 py-3 rounded-lg font-semibold shadow-lg shadow-[#ff4d6d]/20 transition-all"
@@ -233,13 +257,18 @@ export default function ShowtimesPage() {
                   Buy Tickets
                 </button>
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
                     const newFav = !isFavorite;
                     setIsFavorite(newFav);
-                    if (newFav) {
-                      localStorage.setItem(`fav_${movie.id}`, 'true');
-                    } else {
-                      localStorage.removeItem(`fav_${movie.id}`);
+                    try {
+                      if (newFav) {
+                        await apiClient.post('/favorites', { movie_id: movie.id });
+                      } else {
+                        await apiClient.delete(`/favorites/${movie.id}`);
+                      }
+                    } catch (err) {
+                      console.error('Failed to update favorite status:', err);
+                      setIsFavorite(!newFav); // revert on error
                     }
                   }}
                   className={`w-12 h-12 flex items-center justify-center rounded-full transition-colors group ${isFavorite ? 'bg-[#ff4d6d]/10' : 'bg-[#2a2d3e] hover:bg-[#34384c]'}`}
@@ -262,7 +291,13 @@ export default function ShowtimesPage() {
             <h2 className="text-xl font-bold mb-6">Your Favorite Cast</h2>
             <div className="flex gap-6 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {cast.map((actor) => (
-                <div key={actor.id} className="flex flex-col items-center flex-shrink-0 w-24">
+                <a 
+                  key={actor.id} 
+                  href={`https://en.wikipedia.org/wiki/${encodeURIComponent(actor.name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center flex-shrink-0 w-24 hover:opacity-80 transition-opacity"
+                >
                   <div className="w-20 h-20 rounded-full overflow-hidden mb-3 border-2 border-white/10 bg-[#151722] transition-transform hover:scale-105 cursor-pointer">
                     {actor.profile_path ? (
                       <img 
@@ -279,7 +314,7 @@ export default function ShowtimesPage() {
                   <span className="text-xs font-semibold text-center text-white line-clamp-2 leading-tight">
                     {actor.name}
                   </span>
-                </div>
+                </a>
               ))}
             </div>
           </motion.div>
@@ -293,7 +328,7 @@ export default function ShowtimesPage() {
           className="mb-12"
         >
           <div className="flex items-center gap-2 mb-6 text-xl font-semibold">
-            <Calendar className="w-6 h-6 text-neon-cyan" />
+            <Calendar className="w-6 h-6 text-[#ff4d6d]" />
             <h2>Select Date</h2>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-4 hide-scrollbar">
@@ -306,7 +341,7 @@ export default function ShowtimesPage() {
                   onClick={() => setSelectedDate(date)}
                   className={`flex-shrink-0 flex flex-col items-center justify-center w-20 h-24 rounded-2xl transition-all duration-300 ${
                     isSelected
-                      ? 'bg-gradient-to-br from-neon-purple to-neon-blue text-white shadow-[0_0_20px_rgba(139,92,246,0.4)] transform scale-105'
+                      ? 'bg-gradient-to-br from-red-500 to-pink-500 text-white shadow-[0_0_20px_rgba(255,42,85,0.4)] transform scale-105'
                       : 'glass-panel text-gray-400 hover:text-white hover:bg-white/10'
                   }`}
                 >

@@ -105,9 +105,16 @@ function ReservationsContent() {
         })
       );
 
+      // Filter out reservations for past showtimes so they don't clutter the dashboard
+      const activeReservations = reservationsWithDetails.filter(res => {
+        if (!res.showtime) return false;
+        const showtimeDate = new Date(res.showtime.start_time);
+        return showtimeDate > new Date();
+      });
+
       // Sort by latest first
-      reservationsWithDetails.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setReservations(reservationsWithDetails);
+      activeReservations.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setReservations(activeReservations);
     } catch (err: any) {
       console.error('Failed to fetch reservations:', err);
       setError('Failed to load reservations');
@@ -163,6 +170,7 @@ function ReservationsContent() {
           <Link href="/dashboard" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Dashboard</Link>
           <Link href="/movies" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Movies</Link>
           <Link href="/reservations" className="px-5 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-red-500 to-pink-500 text-transparent bg-clip-text">Tickets</Link>
+          <Link href="/favorites" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Favorites</Link>
         </div>
 
         <div className="flex items-center gap-6">

@@ -14,6 +14,8 @@ interface Movie {
   title: string;
   description: string;
   poster_url: string;
+  backdrop_url?: string;
+  release_date?: string;
   genre_id?: string;
 }
 
@@ -21,6 +23,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [heroMovie, setHeroMovie] = useState<Movie | null>(null);
   const [fetching, setFetching] = useState(true);
 
   const trailersList = [
@@ -47,6 +50,14 @@ export default function DashboardPage() {
       try {
         const res = await apiClient.get<Movie[]>('/movies');
         setMovies(res.data);
+        
+        try {
+          const heroRes = await apiClient.get<Movie>('/movies/hero');
+          setHeroMovie(heroRes.data);
+        } catch (heroErr) {
+          console.error('Failed to fetch hero movie', heroErr);
+        }
+        
       } catch (err) {
         console.error('Failed to fetch movies', err);
       } finally {
@@ -101,6 +112,7 @@ export default function DashboardPage() {
           <Link href="/dashboard" className="px-5 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-red-500 to-pink-500 text-transparent bg-clip-text">Dashboard</Link>
           <Link href="/movies" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Movies</Link>
           <Link href="/reservations" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Tickets</Link>
+          <Link href="/favorites" className="px-5 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-colors">Favorites</Link>
         </div>
 
         <div className="flex items-center gap-6">
@@ -113,48 +125,60 @@ export default function DashboardPage() {
 
       {/* Hero Section */}
       <section className="relative w-full h-screen min-h-[700px] flex items-center">
-        {/* Background Image & Gradient */}
-        <div className="absolute inset-0 z-0 bg-[#0a0a0f]">
-          <img 
-            src="https://image.tmdb.org/t/p/original/8mnXR9rey5uQ08rZAvzojKWbDQS.jpg" 
-            alt="Spider-Man Backdrop" 
-            className="w-full h-full object-cover object-right opacity-90"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0f] via-[#0a0a0f]/90 to-transparent w-full md:w-3/4"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent"></div>
-        </div>
-
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-6 w-full mt-20">
-          <div className="max-w-2xl">
-            <div className="inline-block bg-white text-black font-extrabold px-3 py-1 text-sm tracking-wider mb-6">
-              MARVEL STUDIOS
-            </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold mb-4 leading-tight tracking-tight">
-              Spider-Man:<br />Brand New Day
-            </h1>
-
-            <div className="flex items-center gap-4 text-sm text-gray-300 mb-6 font-medium">
-              <span>Action | Adventure | Fantasy</span>
-              <div className="w-1 h-1 rounded-full bg-gray-500"></div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" /> 2026
-              </div>
-              <div className="w-1 h-1 rounded-full bg-gray-500"></div>
-              <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4" /> 2h 25m
-              </div>
+        {heroMovie ? (
+          <>
+            {/* Background Image & Gradient */}
+            <div className="absolute inset-0 z-0 bg-[#0a0a0f]">
+              <img 
+                src={heroMovie.backdrop_url || heroMovie.poster_url || "https://image.tmdb.org/t/p/original/qeQJx07rK2xm8SD2sJxFKhE7gs0.jpg"} 
+                alt={`${heroMovie.title} Backdrop`} 
+                className="w-full h-full object-cover object-right opacity-90"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0f] via-[#0a0a0f]/90 to-transparent w-full md:w-3/4"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent"></div>
             </div>
 
-            <p className="text-gray-300 text-lg mb-8 max-w-lg leading-relaxed">
-              It's a brand new day for Peter Parker. Fighting crime full-time as Spider-Man in a world that doesn't remember him, Peter faces a new threat that could change everything.
-            </p>
+            {/* Hero Content */}
+            <div className="relative z-10 max-w-7xl mx-auto px-6 w-full mt-20">
+              <div className="max-w-2xl">
+                <div className="inline-block bg-white text-black font-extrabold px-3 py-1 text-sm tracking-wider mb-6">
+                  FEATURED
+                </div>
+                <h1 className="text-5xl md:text-7xl font-extrabold mb-4 leading-tight tracking-tight">
+                  {heroMovie.title}
+                </h1>
 
-            <Link href="/movies" className="inline-flex items-center gap-2 bg-gradient-to-r from-[#ff4d6d] to-[#ff2a55] text-white font-semibold py-3 px-8 rounded-full hover:shadow-[0_0_20px_rgba(255,42,85,0.4)] transition-all transform hover:scale-105">
-              Explore Movies <ArrowRight className="w-4 h-4" />
-            </Link>
+                <div className="flex items-center gap-4 text-sm text-gray-300 mb-6 font-medium">
+                  <span>Action | Adventure | Fantasy</span>
+                  {heroMovie.release_date && (
+                    <>
+                      <div className="w-1 h-1 rounded-full bg-gray-500"></div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" /> {heroMovie.release_date.substring(0, 4)}
+                      </div>
+                    </>
+                  )}
+                  <div className="w-1 h-1 rounded-full bg-gray-500"></div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" /> 2h 25m
+                  </div>
+                </div>
+
+                <p className="text-gray-300 text-lg mb-8 max-w-lg leading-relaxed">
+                  {heroMovie.description || "An epic cinematic experience awaits."}
+                </p>
+
+                <Link href={`/movies/${heroMovie.id}/showtimes`} className="inline-flex items-center gap-2 bg-gradient-to-r from-[#ff4d6d] to-[#ff2a55] text-white font-semibold py-3 px-8 rounded-full hover:shadow-[0_0_20px_rgba(255,42,85,0.4)] transition-all transform hover:scale-105">
+                  Book Tickets <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 z-0 bg-[#0a0a0f] animate-pulse flex items-center justify-center">
+            <div className="w-16 h-16 border-4 border-[#ff4d6d] border-t-transparent rounded-full animate-spin"></div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Now Showing Section */}
