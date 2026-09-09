@@ -7,7 +7,7 @@ from app.models.movie import Movie
 def run():
     db = SessionLocal()
     movies = db.query(Movie).all()
-    TMDB_API_KEY = '7e2a415d319c6019562355c4ab955745'
+    TMDB_API_KEY = os.environ.get('TMDB_API_KEY', 'your_tmdb_api_key_here')
 
     for m in movies:
         print(f'Fetching data for: {m.title}')

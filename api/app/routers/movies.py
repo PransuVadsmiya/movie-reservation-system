@@ -179,8 +179,9 @@ def fetch_and_add_tmdb_movie(
     db: Session = Depends(get_db), 
     _admin: User = Depends(require_admin)
 ):
+    from app.config import settings
     query = urllib.parse.quote(request_data.title)
-    TMDB_API_KEY = "7e2a415d319c6019562355c4ab955745"
+    TMDB_API_KEY = settings.tmdb_api_key
     url = f"https://api.themoviedb.org/3/search/movie?query={query}&api_key={TMDB_API_KEY}"
     
     try:

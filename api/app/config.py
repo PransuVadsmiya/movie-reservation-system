@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
+    
+    tmdb_api_key: str = ""
 
     class Config:
         env_file = ".env"

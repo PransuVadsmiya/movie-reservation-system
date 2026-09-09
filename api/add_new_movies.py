@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from app.database import SessionLocal
 from app.models.movie import Movie
 
-TMDB_API_KEY = "7e2a415d319c6019562355c4ab955745"
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key_here")
 
 movies_to_add = [
     "Oppenheimer",
