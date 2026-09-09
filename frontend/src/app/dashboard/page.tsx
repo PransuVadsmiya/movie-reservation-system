@@ -15,6 +15,7 @@ interface Movie {
   description: string;
   poster_url: string;
   backdrop_url?: string;
+  trailer_video_id?: string;
   release_date?: string;
   genre_id?: string;
 }
@@ -26,13 +27,7 @@ export default function DashboardPage() {
   const [heroMovie, setHeroMovie] = useState<Movie | null>(null);
   const [fetching, setFetching] = useState(true);
 
-  const trailersList = [
-    { title: "DEADPOOL & WOLVERINE Official Trailer", channel: "Marvel Entertainment", videoId: "73_1biulkYk", img: "https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=500&auto=format&fit=crop" },
-    { title: "DUNE: PART TWO Official Trailer", channel: "Warner Bros. Pictures", videoId: "Way9Dexny3w", img: "https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?q=80&w=500&auto=format&fit=crop" },
-    { title: "CAPTAIN AMERICA Official Trailer", channel: "Marvel Entertainment", videoId: "1pHDWnXmK7Y", img: "https://images.unsplash.com/photo-1534809044339-447e62a048a9?q=80&w=500&auto=format&fit=crop" },
-    { title: "WHAT IF...? Official Trailer", channel: "Marvel Entertainment", videoId: "umiKiW4En9g", img: "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?q=80&w=500&auto=format&fit=crop" },
-  ];
-  const [activeTrailer, setActiveTrailer] = useState(trailersList[0]);
+  const [activeTrailerIndex, setActiveTrailerIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
@@ -93,8 +88,20 @@ export default function DashboardPage() {
     year: '2026',
     duration: '2h 15m',
     rating: (8.0 - (i * 0.2)).toFixed(1),
-    poster_url: m.poster_url || mockMovies[i % mockMovies.length].poster_url
+    poster_url: m.poster_url || mockMovies[i % mockMovies.length].poster_url,
+    backdrop_url: m.backdrop_url || m.poster_url || mockMovies[i % mockMovies.length].poster_url,
+    trailer_video_id: m.trailer_video_id
   })) : mockMovies;
+
+  const dynamicTrailersList = displayMovies.slice(0, 4).map((movie) => ({
+    id: movie.id,
+    title: `${movie.title} - Official Trailer`,
+    channel: "Ticketify Trailers",
+    videoId: (movie as any).trailer_video_id || "JfVOs4VSpmA", // Fallback if no trailer exists
+    img: (movie as any).backdrop_url || movie.poster_url
+  }));
+
+  const activeTrailer = dynamicTrailersList[activeTrailerIndex] || dynamicTrailersList[0];
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white font-sans selection:bg-red-500/30">
@@ -280,13 +287,13 @@ export default function DashboardPage() {
 
         {/* Small Trailer Thumbnails */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          {trailersList.map((trailer, idx) => {
-            const isActive = activeTrailer.videoId === trailer.videoId;
+          {dynamicTrailersList.map((trailer, idx) => {
+            const isActive = activeTrailerIndex === idx;
             return (
               <div 
                 key={idx} 
                 onClick={() => {
-                  setActiveTrailer(trailer);
+                  setActiveTrailerIndex(idx);
                   setIsPlaying(true);
                 }}
                 className={`aspect-video rounded-xl overflow-hidden relative group cursor-pointer border-2 transition-all ${isActive ? 'border-red-500 shadow-[0_0_15px_rgba(255,0,0,0.3)]' : 'border-white/10 hover:border-white/30'}`}

@@ -191,6 +191,7 @@ def fetch_and_add_tmdb_movie(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found on TMDB")
             
         movie_data = data['results'][0]
+        tmdb_id = movie_data['id']
         
         # Check if movie already exists
         existing = db.query(Movie).filter(Movie.title.ilike(movie_data['title'])).first()
@@ -199,6 +200,20 @@ def fetch_and_add_tmdb_movie(
             
         poster_url = f"https://image.tmdb.org/t/p/w500{movie_data['poster_path']}" if movie_data.get('poster_path') else None
         backdrop_url = f"https://image.tmdb.org/t/p/original{movie_data['backdrop_path']}" if movie_data.get('backdrop_path') else None
+        
+        # Fetch official trailer
+        trailer_video_id = None
+        try:
+            videos_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}/videos?api_key={TMDB_API_KEY}"
+            v_resp = urllib.request.urlopen(videos_url)
+            v_data = json.loads(v_resp.read())
+            
+            for vid in v_data.get('results', []):
+                if vid.get('site') == 'YouTube' and vid.get('type') == 'Trailer':
+                    trailer_video_id = vid.get('key')
+                    break
+        except Exception:
+            pass
         
         # Parse release date
         release_date = None
@@ -219,6 +234,7 @@ def fetch_and_add_tmdb_movie(
             description=movie_data.get('overview'),
             poster_url=poster_url,
             backdrop_url=backdrop_url,
+            trailer_video_id=trailer_video_id,
             rating=rating,
             release_date=release_date
         )

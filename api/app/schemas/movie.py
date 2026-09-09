@@ -21,6 +21,7 @@ class MovieCreate(BaseModel):
     description: Optional[str] = None
     poster_url: Optional[str] = None
     backdrop_url: Optional[str] = None
+    trailer_video_id: Optional[str] = None
     rating: Optional[float] = None
     release_date: Optional[date] = None
     genre_id: Optional[uuid.UUID] = None
@@ -32,6 +33,7 @@ class MovieUpdate(BaseModel):
     description: Optional[str] = None
     poster_url: Optional[str] = None
     backdrop_url: Optional[str] = None
+    trailer_video_id: Optional[str] = None
     rating: Optional[float] = None
     release_date: Optional[date] = None
     genre_id: Optional[uuid.UUID] = None
@@ -45,6 +47,7 @@ class MovieOut(BaseModel):
     description: Optional[str] = None
     poster_url: Optional[str] = None
     backdrop_url: Optional[str] = None
+    trailer_video_id: Optional[str] = None
     rating: Optional[float] = None
     release_date: Optional[date] = None
     genre_id: Optional[uuid.UUID] = None

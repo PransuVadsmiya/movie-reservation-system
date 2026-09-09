@@ -24,6 +24,7 @@ class Movie(Base):
     description = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
     backdrop_url = Column(String, nullable=True)
+    trailer_video_id = Column(String, nullable=True)
     rating = Column(Float, nullable=True)
     release_date = Column(Date, nullable=True)
     genre_id = Column(UUID(as_uuid=True), ForeignKey("genres.id"), nullable=True)
