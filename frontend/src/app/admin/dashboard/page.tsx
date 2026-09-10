@@ -29,6 +29,54 @@ export default function AdminDashboardPage() {
   // New state variables for Quick Add Movie
   const [addingMovie, setAddingMovie] = useState(false);
   const [addMessage, setAddMessage] = useState({ text: '', type: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim().length > 2) {
+        setIsSearching(true);
+        try {
+          const response = await apiClient.get(`/movies/search-tmdb?query=${encodeURIComponent(searchQuery)}`);
+          setSearchResults(response.data.results || []);
+          setShowDropdown(true);
+        } catch (error) {
+          console.error('Search failed:', error);
+          setSearchResults([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const submitMovie = async (title: string, tmdbId: number | null) => {
+    setAddingMovie(true);
+    setAddMessage({ text: '', type: '' });
+    
+    try {
+      const payload = tmdbId ? { title, tmdb_id: tmdbId } : { title };
+      const response = await apiClient.post('/movies/fetch-from-tmdb', payload);
+      setAddMessage({ 
+        text: `Successfully added "${response.data.title}" to the global database! You can now add showtimes for it.`, 
+        type: 'success' 
+      });
+      setSearchQuery('');
+    } catch (error: any) {
+      setAddMessage({ 
+        text: error.response?.data?.detail || 'Failed to add movie. It may already exist or was not found on TMDB.', 
+        type: 'error' 
+      });
+    } finally {
+      setAddingMovie(false);
+    }
+  };
 
   useEffect(() => {
     fetchStats();
@@ -96,49 +144,71 @@ export default function AdminDashboardPage() {
       <div>
         <h2 className="text-2xl font-bold mb-6">Quick Add Movie</h2>
         <div className="bg-[#151722] border border-white/5 rounded-xl p-6">
-          <form 
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              const title = formData.get('title') as string;
-              if (!title) return;
-              
-              setAddingMovie(true);
-              setAddMessage({ text: '', type: '' });
-              
-              try {
-                const response = await apiClient.post('/movies/fetch-from-tmdb', { title });
-                setAddMessage({ 
-                  text: `Successfully added "${response.data.title}" to the global database! You can now add showtimes for it.`, 
-                  type: 'success' 
-                });
-                (e.target as HTMLFormElement).reset();
-              } catch (error: any) {
-                setAddMessage({ 
-                  text: error.response?.data?.detail || 'Failed to add movie. It may already exist or was not found on TMDB.', 
-                  type: 'error' 
-                });
-              } finally {
-                setAddingMovie(false);
-              }
-            }}
-            className="flex flex-col sm:flex-row gap-4 max-w-2xl"
-          >
-            <input 
-              type="text" 
-              name="title" 
-              placeholder="Enter movie title (e.g. Inception)" 
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-[#ff4d6d] transition-colors"
-              required
-            />
-            <button 
-              type="submit" 
-              disabled={addingMovie}
-              className="bg-[#ff4d6d] hover:bg-[#ff2a55] disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+          <div className="relative">
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!searchQuery) return;
+                await submitMovie(searchQuery, null);
+              }}
+              className="flex flex-col sm:flex-row gap-4 max-w-2xl"
             >
-              {addingMovie ? 'Fetching...' : 'Fetch & Add to DB'}
-            </button>
-          </form>
+              <div className="relative flex-1">
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => { if(searchResults.length > 0) setShowDropdown(true); }}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                  placeholder="Search TMDB for a movie (e.g. Inception)" 
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-[#ff4d6d] transition-colors"
+                  required
+                />
+                
+                {/* Dropdown */}
+                {showDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1d27] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+                    {isSearching ? (
+                      <div className="p-4 text-gray-400 text-center">Searching TMDB...</div>
+                    ) : searchResults.length === 0 ? (
+                      <div className="p-4 text-gray-400 text-center">No results found</div>
+                    ) : (
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {searchResults.map((result) => (
+                          <div 
+                            key={result.tmdb_id}
+                            onClick={() => {
+                              setSearchQuery(result.title);
+                              setShowDropdown(false);
+                              submitMovie(result.title, result.tmdb_id);
+                            }}
+                            className="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0"
+                          >
+                            {result.poster_url ? (
+                              <img src={result.poster_url} alt={result.title} className="w-10 h-14 object-cover rounded" />
+                            ) : (
+                              <div className="w-10 h-14 bg-gray-800 rounded flex items-center justify-center text-[10px]">No Image</div>
+                            )}
+                            <div>
+                              <div className="text-white font-medium">{result.title}</div>
+                              <div className="text-gray-400 text-sm">{result.release_date ? result.release_date.split('-')[0] : 'Unknown Year'}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button 
+                type="submit" 
+                disabled={addingMovie}
+                className="bg-[#ff4d6d] hover:bg-[#ff2a55] disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 min-w-[140px]"
+              >
+                {addingMovie ? 'Adding...' : 'Add to DB'}
+              </button>
+            </form>
+          </div>
           {addMessage.text && (
             <div className={`mt-4 p-4 rounded-lg border ${addMessage.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
               {addMessage.text}

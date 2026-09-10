@@ -19,8 +19,14 @@ def get_dashboard_stats(db: Session = Depends(get_db), _admin: User = Depends(re
     
     theater_id = _admin.theater.id
 
-    # Base query for showtimes in this theater
-    showtimes_query = db.query(Showtime).join(Screen).filter(Screen.theater_id == theater_id)
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+
+    # Base query for active showtimes in this theater (future shows)
+    showtimes_query = db.query(Showtime).join(Screen).filter(
+        Screen.theater_id == theater_id,
+        Showtime.start_time > now
+    )
     active_shows_count = showtimes_query.count()
 
     # Query for bookings mapped to this theater
@@ -47,13 +53,17 @@ def get_dashboard_stats(db: Session = Depends(get_db), _admin: User = Depends(re
     )
     total_revenue = revenue_query.scalar() or 0
 
-    # Query for total users
+    # Query for active users (confirmed reservations for future shows)
     total_users_query = (
         db.query(Reservation.user_id)
         .join(ReservationSeat, ReservationSeat.reservation_id == Reservation.id)
         .join(Showtime, Showtime.id == ReservationSeat.showtime_id)
         .join(Screen, Screen.id == Showtime.screen_id)
-        .filter(Screen.theater_id == theater_id)
+        .filter(
+            Screen.theater_id == theater_id,
+            Reservation.status == ReservationStatus.confirmed,
+            Showtime.start_time > now
+        )
         .distinct()
     )
     total_users = total_users_query.count()

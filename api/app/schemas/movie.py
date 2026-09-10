@@ -55,3 +55,4 @@ class MovieOut(BaseModel):
 
 class MovieFetchRequest(BaseModel):
     title: str
+    tmdb_id: Optional[int] = None

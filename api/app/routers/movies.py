@@ -135,6 +135,34 @@ def get_hero_movie(db: Session = Depends(get_db)):
     return best_movie
 
 
+@router.get("/movies/search-tmdb", status_code=status.HTTP_200_OK)
+def search_tmdb_movies(
+    query: str, 
+    _admin: User = Depends(require_admin)
+):
+    from app.config import settings
+    encoded_query = urllib.parse.quote(query)
+    TMDB_API_KEY = settings.tmdb_api_key
+    url = f"https://api.themoviedb.org/3/search/movie?query={encoded_query}&api_key={TMDB_API_KEY}"
+    
+    try:
+        response = urllib.request.urlopen(url)
+        data = json.loads(response.read())
+        
+        results = []
+        for item in data.get('results', [])[:5]:
+            results.append({
+                "tmdb_id": item['id'],
+                "title": item['title'],
+                "release_date": item.get('release_date', ''),
+                "poster_url": f"https://image.tmdb.org/t/p/w200{item['poster_path']}" if item.get('poster_path') else None
+            })
+            
+        return {"results": results}
+    except urllib.error.URLError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to contact TMDB: {str(e)}")
+
+
 @router.get("/movies/{movie_id}", response_model=MovieOut)
 def get_movie(movie_id: uuid.UUID, db: Session = Depends(get_db)):
     movie = db.query(Movie).filter(Movie.id == movie_id).first()
@@ -180,19 +208,25 @@ def fetch_and_add_tmdb_movie(
     _admin: User = Depends(require_admin)
 ):
     from app.config import settings
-    query = urllib.parse.quote(request_data.title)
     TMDB_API_KEY = settings.tmdb_api_key
-    url = f"https://api.themoviedb.org/3/search/movie?query={query}&api_key={TMDB_API_KEY}"
     
     try:
-        response = urllib.request.urlopen(url)
-        data = json.loads(response.read())
-        
-        if not data.get('results'):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found on TMDB")
+        if request_data.tmdb_id:
+            url = f"https://api.themoviedb.org/3/movie/{request_data.tmdb_id}?api_key={TMDB_API_KEY}"
+            response = urllib.request.urlopen(url)
+            movie_data = json.loads(response.read())
+            tmdb_id = movie_data['id']
+        else:
+            query = urllib.parse.quote(request_data.title)
+            url = f"https://api.themoviedb.org/3/search/movie?query={query}&api_key={TMDB_API_KEY}"
+            response = urllib.request.urlopen(url)
+            data = json.loads(response.read())
             
-        movie_data = data['results'][0]
-        tmdb_id = movie_data['id']
+            if not data.get('results'):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found on TMDB")
+                
+            movie_data = data['results'][0]
+            tmdb_id = movie_data['id']
         
         # Check if movie already exists
         existing = db.query(Movie).filter(Movie.title.ilike(movie_data['title'])).first()
@@ -248,5 +282,3 @@ def fetch_and_add_tmdb_movie(
         
     except urllib.error.URLError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to contact TMDB: {str(e)}")
-
-
